@@ -595,14 +595,14 @@ read_extended_number
 
 MACRO GET_YMP_OUTPUT_BUFFER_A6 AY_REGN, REGVAL
 
-	ld a,(ix+AY_REGN)
+	ld a,(ix+{AY_REGN})
 	add a,ymp_a6
 	ld l,a
 	adc a,ymp_a6/#100
 	sub a,l
 	ld h,a
 
-	ld REGVAL,(hl)
+	ld {REGVAL},(hl)
 
 ENDM
 
@@ -619,10 +619,10 @@ MACRO SEND_PACK_DATA_AY REGN, REGVAL
 	out (c),a
 	ld c,a
 
-	GET_YMP_OUTPUT_BUFFER_A6 {REGN}, REGVAL
+	GET_YMP_OUTPUT_BUFFER_A6 {REGN}, {REGVAL}
 
 	ld b,#f4	; PPI port A data
-	out (c),REGVAL	; send register data value
+	out (c),{REGVAL}	; send register data value
 
 	ld b,#f6	; PPI port C
 	ld a,c
@@ -675,12 +675,12 @@ ymp_sets_done
 
 MACRO SHIFT_IN_TOP_BIT_CHAN REGV, REGV7
 
-	ld a,REGV
+	ld a,{REGV}
 	add a,a
-	ld REGV,a
-	ld a,REGV7
-	adc a,REGV7
-	ld REGV7,a
+	ld {REGV},a
+	ld a,{REGV7}
+	adc a,{REGV7}
+	ld {REGV7},a
 	
 ENDM
 

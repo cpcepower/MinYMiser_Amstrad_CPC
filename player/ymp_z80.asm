@@ -675,12 +675,8 @@ ymp_sets_done
 
 MACRO SHIFT_IN_TOP_BIT_CHAN REGV, REGV7
 
-	ld a,{REGV}
-	add a,a
-	ld {REGV},a
-	ld a,{REGV7}
-	adc a,{REGV7}
-	ld {REGV7},a
+	sla {REGV}
+	rl {REGV7}
 	
 ENDM
 

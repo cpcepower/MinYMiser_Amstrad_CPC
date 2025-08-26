@@ -155,9 +155,7 @@ REPEAT 7
 ;;	add.b	d0,d0
 ;;	bcc.s	*+(2+4+2)
 
-	ld a,e
-	add a,a
-	ld e,a
+	sla e
 	jr nc,@yd1
 
 ;;	move.b	#r,(a2)

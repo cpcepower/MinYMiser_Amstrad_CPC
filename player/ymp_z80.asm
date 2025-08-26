@@ -3,8 +3,9 @@
 ; - $VER 1.0 - (c) 08/2025 Megachur
 ; ---------------------------
 ; 680x0 -> Z80 code conversion
-; $VER 1.0 - no optimisation
-; for Frosty / Benediction Team and all the Amstrad CPC fans ;-) !
+; $VER 1.1 - little optimisation of code for sending values to psg registers
+; 1.0 - no optimisation
+; for Frosty / Benediction Team and all the Amstrad CPC fans ;-) !																				   
 ; -----------------------------------------------------------------------
 ;	YMP PLAYER CODE
 ; -----------------------------------------------------------------------
@@ -592,25 +593,23 @@ read_extended_number
 ; some MACROs
 ; ---------------------------
 
-MACRO GET_YMP_OUTPUT_BUFFER_A6
+MACRO GET_YMP_OUTPUT_BUFFER_A6 AY_REGN, REGVAL
 
-	ld a,(hl)
-	inc hl
-
+	ld a,(ix+AY_REGN)
 	add a,ymp_a6
-	ld c,a
+	ld l,a
 	adc a,ymp_a6/#100
-	sub a,c
-	ld b,a
+	sub a,l
+	ld h,a
 
-	ld a,(bc)
+	ld REGVAL,(hl)
 
 ENDM
 
-MACRO SEND_PACK_DATA_AY
+MACRO SEND_PACK_DATA_AY REGN, REGVAL
 
 	ld b,#f4	; PPI port A data
-	out (c),d	; send register number
+	out (c),e	; send register number
 
 	ld b,#f6	; PPI port C
 	in a,(c)	; read value
@@ -618,18 +617,18 @@ MACRO SEND_PACK_DATA_AY
 	out (c),a
 	and #3f		; set inactive
 	out (c),a
-	ld e,a
+	ld c,a
 
-	GET_YMP_OUTPUT_BUFFER_A6
+	GET_YMP_OUTPUT_BUFFER_A6 {REGN}, REGVAL
 
 	ld b,#f4	; PPI port A data
-	out (c),a	; send register data value
+	out (c),REGVAL	; send register data value
 
 	ld b,#f6	; PPI port C
-	ld a,e
+	ld a,c
 	or #80		; write to selected PSG register
 	out (c),a	; send
-	out (c),e	; set inactive
+	out (c),c	; set inactive
 
 ENDM
 ; ---------------------------
@@ -643,17 +642,7 @@ ymp_sets_done
 ;; move.l ymp_register_list_ptr(a0),a5
 ;; moveq #0,d0
 
-	ld hl,(a0_psa+ymp_register_list_ptr)
-
-	ld d,#00
-
-write_reg_06_00
-	SEND_PACK_DATA_AY
-
-	inc d
-	ld a,d
-	cp #07
-	jr nz,write_reg_06_00
+	ld ix,(a0_psa+ymp_register_list_ptr)
 
 ; Generate the mixer register
 ; We need channels 8, 9, 10
@@ -680,44 +669,9 @@ write_reg_06_00
 ;;	addx.w	d4,d4					; shift in top bit channel A
 ;;	endr
 
-	ld a,(hl)				; d1 = mixer A
-	inc hl
-
-	add a,ymp_a6
-	ld e,a
-	adc a,ymp_a6/#100
-	sub a,e
-	ld d,a
-
-	ld a,(de)
-	ld c,a					; c = d1
-
-	ld a,(hl)				; d2 = mixer B
-	inc hl
-
-	add a,ymp_a6
-	ld e,a
-	adc a,ymp_a6/#100
-	sub a,e
-	ld d,a
-
-	ld a,(de)
-	ld b,a					; b = d2
-
-	ld a,(hl)				; d3 = mixer C
-;	inc hl
-
-	add a,ymp_a6
-	ld e,a
-	adc a,ymp_a6/#100
-	sub a,e
-	ld d,a
-
-	ld a,(de)
-	ld e,a					; e = d3
-
-	dec hl
-	dec hl
+	GET_YMP_OUTPUT_BUFFER_A6 7, c	; d1 = mixer A
+	GET_YMP_OUTPUT_BUFFER_A6 8, b	; d2 = mixer B
+	GET_YMP_OUTPUT_BUFFER_A6 9, e	; d3 = mixer C
 
 MACRO SHIFT_IN_TOP_BIT_CHAN REGV, REGV7
 
@@ -753,6 +707,20 @@ REND
 ;;r	set	r+1
 ;;	endr
 
+	ld e,#00
+
+LET R = 0
+
+REPEAT 7
+
+	SEND_PACK_DATA_AY R, l
+
+	inc e
+
+LET R = R + 1
+
+REND
+
 ; Now mixer
 
 ;;	move.b	#7,(a3)
@@ -761,10 +729,8 @@ REND
 ;;	or.b	d1,d4
 ;;	move.b	d4,(a1)
 
-	ld a,#07
-
 	ld b,#f4	; PPI port A data
-	out (c),a	; send register number
+	out (c),e	; send register number
 
 	ld b,#f6	; PPI port C
 	in a,(c)	; read value
@@ -772,7 +738,7 @@ REND
 	out (c),a
 	and #3f		; set inactive
 	out (c),a
-	ld e,a
+	ld c,a
 
 	ld b,#f4	; PPI port A data
 	; in a,(c)	; dummy on cpc ;-)
@@ -782,10 +748,12 @@ REND
 	out (c),d	; send register data value
 
 	ld b,#f6	; PPI port C
-	ld a,e
+	ld a,c
 	or #80		; write to selected PSG register
 	out (c),a	; send
-	out (c),e	; set inactive
+	out (c),c	; set inactive
+
+	inc e
 
 ; Now 8,9,10,11,12
 
@@ -796,40 +764,35 @@ REND
 ;;r	set	r+1
 ;;	endr
 
-	ld d,#08
 
-write_reg_08_12
-	SEND_PACK_DATA_AY
+REPEAT 5
 
-	inc d
-	ld a,d
-	cp #0d
-	jr nz,write_reg_08_12
+	SEND_PACK_DATA_AY R, l 
+
+	inc e
+
+LET R = R + 1
+
+REND
 
 ; Reg 13 - buzzer envelope
 
-;;	move.b	(a5)+,d0				; fetch depack stream index for this reg
-;;	move.b	(a6,d0.w),d0				; Buzzer envelope register is special case,
-;;	bmi.s	.skip_write
+;;	move.b (a5)+,d0				; fetch depack stream index for this reg
+;;	move.b (a6,d0.w),d0			; Buzzer envelope register is special case,
+;;	bmi.s .skip_write
 
-	ld a,(hl)
+	GET_YMP_OUTPUT_BUFFER_A6 13-1, a
 
-	add a,ymp_a6
-	ld c,a
-	adc a,ymp_a6/#100
-	sub a,c
-	ld b,a
-
-	ld a,(bc)
 	or a
 	jp m,ymp_skip_write
 
 ;;	move.b	#13,(a3)				; only write if value is not -1
 ;;	move.b	d0,(a1)					; since writing re-starts the envelope
 
-	ld b,#f4	; PPI port A data
-	out (c),d	; send register number
 	ld d,a
+
+	ld b,#f4	; PPI port A data
+	out (c),e	; send register number
 
 	ld b,#f6	; PPI port C
 	in a,(c)	; read value
@@ -837,16 +800,16 @@ write_reg_08_12
 	out (c),a
 	and #3f		; set inactive
 	out (c),a
-	ld e,a
+	ld c,a
 
 	ld b,#f4	; PPI port A data
 	out (c),d	; send register data value
 
 	ld b,#f6	; PPI port C
-	ld a,e
+	ld a,c
 	or #80		; write to selected PSG register
 	out (c),a	; send
-	out (c),e	; set inactive
+	out (c),c	; set inactive
 
 ymp_skip_write		;; .skip_write
 

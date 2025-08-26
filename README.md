@@ -1,12 +1,12 @@
 MinYMiser
 =========
-; ---------------------------
-; - Amstrad CPC Z80 version of MinYMiser (c) 08/2025 Megachur
-; ---------------------------
-; fork from https://github.com/tattlemuss/minymiser
-; ---------------------------
-; Warning - Use a YM file at 1Mhz in input of the packer for replaying at Amtrad CPC AY-8912 rate !
-; ---------------------------
+---------------------------
+- Amstrad CPC Z80 version of MinYMiser (c) 08/2025 Megachur
+---------------------------
+fork from https://github.com/tattlemuss/minymiser
+---------------------------
+Warning - Use a YM file at 1Mhz in input of the packer for replaying at Amtrad CPC AY-8912 rate !
+---------------------------
 
 Some experiments in compressing YM-2149 register data streams and depacking at runtime.
 
